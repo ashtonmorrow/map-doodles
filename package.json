@@ -1,0 +1,23 @@
+{
+  "name": "mapbox",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashtonmorrow/map-doodles.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ashtonmorrow/map-doodles/issues"
+  },
+  "homepage": "https://github.com/ashtonmorrow/map-doodles#readme",
+  "description": "",
+  "dependencies": {
+    "@notionhq/client": "^2.3.0"
+  }
+}
