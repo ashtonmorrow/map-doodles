@@ -69,7 +69,7 @@
 
       map.on('click', 'country-fills', (e) => {
         const name = e.features[0].properties.name_en.toLowerCase().replace(/\s+/g, '-');
-        window.location.href = `https://mike-lee.me/${name}`;
+        window.location.href = `https://mike-lee.me/countries/${name}`;
       });
 
       map.getCanvas().style.cursor = 'default';
