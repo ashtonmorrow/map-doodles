@@ -4,11 +4,21 @@
   <meta charset="utf-8">
   <title>Visited Countries Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet" />
   <style>
-    body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
   </style>
 </head>
 
@@ -33,7 +43,7 @@
         url: 'mapbox://mapbox.country-boundaries-v1'
       });
 
-      // Unvisited countries (base layer)
+      // Base layer (unvisited)
       map.addLayer({
         id: 'country-fills',
         type: 'fill',
@@ -71,7 +81,7 @@
         filter: ['==', 'iso_3166_1_alpha_3', '']
       });
 
-      // Click to country page
+      // Country click redirect
       map.on('click', 'country-fills', (e) => {
         const name = e.features[0].properties.name_en.toLowerCase().replace(/\s+/g, '-');
         window.location.href = `https://mike-lee.me/countries/${name}`;
@@ -83,9 +93,7 @@
         if (e.features.length > 0) {
           const feature = e.features[0];
           const iso = feature.properties.iso_3166_1_alpha_3;
-
           currentHoverId = iso;
-
           const isVisited = visitedCodes.includes(iso);
 
           map.setFilter('hover-visited', isVisited ? ['==', 'iso_3166_1_alpha_3', iso] : ['==', 'iso_3166_1_alpha_3', '']);
@@ -99,7 +107,7 @@
         currentHoverId = null;
       });
 
-      // Fetch visited countries and render
+      // Fetch visited countries
       fetch("https://wcb-map.netlify.app/.netlify/functions/visited")
         .then(res => res.json())
         .then(data => {
