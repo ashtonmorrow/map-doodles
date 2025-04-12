@@ -31,7 +31,6 @@
         url: 'mapbox://mapbox.country-boundaries-v1'
       });
 
-      // Base country fill
       map.addLayer({
         id: 'country-fills',
         type: 'fill',
@@ -43,7 +42,6 @@
         }
       });
 
-      // Hover effect
       map.addLayer({
         id: 'country-fills-hover',
         type: 'fill',
@@ -71,13 +69,11 @@
         hoveredCountryId = null;
       });
 
-      // Click to redirect to country page
       map.on('click', 'country-fills', (e) => {
         const name = e.features[0].properties.name_en.toLowerCase().replace(/\s+/g, '-');
         window.location.href = `https://mike-lee.me/countries/${name}`;
       });
 
-      // Fetch visited countries and highlight
       fetch("https://wcb-map.netlify.app/.netlify/functions/visited")
         .then(res => res.json())
         .then(data => {
@@ -88,7 +84,15 @@
             type: 'fill',
             source: 'countries',
             'source-layer': 'country_boundaries',
-            filter: ['in', 'iso_3166_1_alpha_3', ...visitedCodes],
+            filter: [
+              'all',
+              ['in', 'iso_3166_1_alpha_3', ...visitedCodes],
+              ['==', ['get', 'disputed'], 'false'],
+              ['any',
+                ['==', ['get', 'worldview'], 'all'],
+                ['==', ['get', 'worldview'], 'US']
+              ]
+            ],
             paint: {
               'fill-color': '#2ecc71',
               'fill-opacity': 0.75
