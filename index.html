@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive Country Map</title>
+  <title>Mike Lee – Interactive Country Map</title>
+  <meta name="description" content="Clickable world map by Mike Lee. Explore countries at mike-lee.me." />
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet" />
   <style>
@@ -68,8 +69,12 @@
       });
 
       map.on('click', 'country-fills', (e) => {
-        const name = e.features[0].properties.name_en.toLowerCase().replace(/\s+/g, '-');
-        window.location.href = `https://mike-lee.me/countries/${name}`;
+        const rawName = e.features[0].properties.name_en.toLowerCase().replace(/\s+/g, '-');
+        const formattedName = rawName
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join('-');
+        window.location.href = `https://mike-lee.me/countries/${formattedName}`;
       });
 
       map.getCanvas().style.cursor = 'default';
