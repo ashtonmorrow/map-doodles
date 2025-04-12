@@ -25,6 +25,8 @@
       center: [0, 20]
     });
 
+    let visitedCodes = [];
+
     map.on('load', () => {
       map.addSource('countries', {
         type: 'vector',
@@ -43,62 +45,74 @@
         }
       });
 
-      // Hover layer
+      // Hover: visited countries
       map.addLayer({
-        id: 'country-fills-hover',
+        id: 'hover-visited',
         type: 'fill',
         source: 'countries',
         'source-layer': 'country_boundaries',
         paint: {
-          'fill-color': '#007aff',
-          'fill-opacity': 0.7
+          'fill-color': '#10B981',
+          'fill-opacity': 0.9
         },
         filter: ['==', 'iso_3166_1_alpha_3', '']
       });
 
-      let hoveredCountryId = null;
-
-      map.on('mousemove', 'country-fills', (e) => {
-        if (e.features.length > 0) {
-          const countryId = e.features[0].properties.iso_3166_1_alpha_3;
-          map.setFilter('country-fills-hover', ['==', 'iso_3166_1_alpha_3', countryId]);
-          hoveredCountryId = countryId;
-        }
+      // Hover: unvisited countries
+      map.addLayer({
+        id: 'hover-unvisited',
+        type: 'fill',
+        source: 'countries',
+        'source-layer': 'country_boundaries',
+        paint: {
+          'fill-color': '#F3F4F6',
+          'fill-opacity': 0.8
+        },
+        filter: ['==', 'iso_3166_1_alpha_3', '']
       });
 
-      map.on('mouseleave', 'country-fills', () => {
-        map.setFilter('country-fills-hover', ['==', 'iso_3166_1_alpha_3', '']);
-        hoveredCountryId = null;
-      });
-
-      // Country click → redirect
+      // Click to country page
       map.on('click', 'country-fills', (e) => {
         const name = e.features[0].properties.name_en.toLowerCase().replace(/\s+/g, '-');
         window.location.href = `https://mike-lee.me/countries/${name}`;
       });
 
-      // Add visited countries layer on top
+      let currentHoverId = null;
+
+      map.on('mousemove', 'country-fills', (e) => {
+        if (e.features.length > 0) {
+          const feature = e.features[0];
+          const iso = feature.properties.iso_3166_1_alpha_3;
+
+          currentHoverId = iso;
+
+          const isVisited = visitedCodes.includes(iso);
+
+          map.setFilter('hover-visited', isVisited ? ['==', 'iso_3166_1_alpha_3', iso] : ['==', 'iso_3166_1_alpha_3', '']);
+          map.setFilter('hover-unvisited', !isVisited ? ['==', 'iso_3166_1_alpha_3', iso] : ['==', 'iso_3166_1_alpha_3', '']);
+        }
+      });
+
+      map.on('mouseleave', 'country-fills', () => {
+        map.setFilter('hover-visited', ['==', 'iso_3166_1_alpha_3', '']);
+        map.setFilter('hover-unvisited', ['==', 'iso_3166_1_alpha_3', '']);
+        currentHoverId = null;
+      });
+
+      // Fetch visited countries and render
       fetch("https://wcb-map.netlify.app/.netlify/functions/visited")
         .then(res => res.json())
         .then(data => {
-          const visitedCodes = data.visitedCountries;
+          visitedCodes = data.visitedCountries;
 
           map.addLayer({
             id: 'visited-countries',
             type: 'fill',
             source: 'countries',
             'source-layer': 'country_boundaries',
-            filter: [
-              'all',
-              ['in', 'iso_3166_1_alpha_3', ...visitedCodes],
-              ['==', ['get', 'disputed'], 'false'],
-              ['any',
-                ['==', ['get', 'worldview'], 'all'],
-                ['==', ['get', 'worldview'], 'US']
-              ]
-            ],
+            filter: ['in', 'iso_3166_1_alpha_3', ...visitedCodes],
             paint: {
-              'fill-color': '#10B981',
+              'fill-color': '#2563EB',
               'fill-opacity': 0.75
             }
           });
