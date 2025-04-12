@@ -1,9 +1,9 @@
 const { Client } = require("@notionhq/client");
 
-exports.handler = async function () {
-  const notion = new Client({ auth: process.env.NOTION_API_KEY });
-  const databaseId = process.env.NOTION_DATABASE_ID;
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const databaseId = process.env.NOTION_DATABASE_ID;
 
+exports.handler = async function () {
   try {
     const response = await notion.databases.query({
       database_id: databaseId,
@@ -14,18 +14,21 @@ exports.handler = async function () {
     });
 
     const visitedCountries = response.results
-      .map(page => page.properties.slug?.rich_text?.[0]?.plain_text?.toLowerCase())
-      .filter(Boolean);
+      .map((page) => {
+        const isoProp = page.properties.iso3;
+        return isoProp && isoProp.rich_text?.[0]?.plain_text;
+      })
+      .filter(Boolean); // remove undefined or empty
 
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*" },
+      headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ visitedCountries })
     };
-  } catch (err) {
+  } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ error: error.message })
     };
   }
 };
