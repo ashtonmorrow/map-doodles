@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Visited Countries Map</title>
+  <meta charset="utf-8" />
+  <title>Interactive Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet" />
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', sans-serif;
-    }
-    #map {
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+    .toggle {
       position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 100%;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-family: sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      z-index: 1;
     }
   </style>
 </head>
-
 <body>
+  <div class="toggle" id="toggleVisited">Hide Visited</div>
   <div id="map"></div>
 
   <script>
@@ -31,102 +35,93 @@
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/light-v11',
+      center: [0, 20],
       zoom: 1.5,
-      center: [0, 20]
+      projection: 'mercator'
     });
 
-    let visitedCodes = [];
+    let visitedCountryCodes = [];
+    let showVisited = true;
 
-    map.on('load', () => {
+    async function getVisitedCountries() {
+      const res = await fetch('/.netlify/functions/visited');
+      const data = await res.json();
+      visitedCountryCodes = data.visitedCountries || [];
+    }
+
+    function updateLayers() {
+      if (!map.getLayer('country-fills')) return;
+
+      map.setPaintProperty('country-fills', 'fill-color', [
+        'case',
+        ['in', ['get', 'iso_3166_1_alpha_3'], ['literal', visitedCountryCodes]],
+        showVisited ? '#2563EB' : '#9CA3AF',
+        '#9CA3AF'
+      ]);
+    }
+
+    map.on('load', async () => {
+      await getVisitedCountries();
+
       map.addSource('countries', {
         type: 'vector',
         url: 'mapbox://mapbox.country-boundaries-v1'
       });
 
-      // Base layer (unvisited)
       map.addLayer({
         id: 'country-fills',
         type: 'fill',
         source: 'countries',
         'source-layer': 'country_boundaries',
         paint: {
-          'fill-color': '#9CA3AF',
-          'fill-opacity': 0.5
+          'fill-color': [
+            'case',
+            ['in', ['get', 'iso_3166_1_alpha_3'], ['literal', visitedCountryCodes]],
+            '#2563EB',
+            '#9CA3AF'
+          ],
+          'fill-opacity': 0.8
         }
       });
 
-      // Hover: visited countries
       map.addLayer({
-        id: 'hover-visited',
+        id: 'country-hover',
         type: 'fill',
         source: 'countries',
         'source-layer': 'country_boundaries',
         paint: {
-          'fill-color': '#10B981',
-          'fill-opacity': 0.9
-        },
-        filter: ['==', 'iso_3166_1_alpha_3', '']
-      });
-
-      // Hover: unvisited countries
-      map.addLayer({
-        id: 'hover-unvisited',
-        type: 'fill',
-        source: 'countries',
-        'source-layer': 'country_boundaries',
-        paint: {
-          'fill-color': '#F3F4F6',
+          'fill-color': [
+            'case',
+            ['in', ['get', 'iso_3166_1_alpha_3'], ['literal', visitedCountryCodes]],
+            '#10B981',
+            '#F3F4F6'
+          ],
           'fill-opacity': 0.8
         },
         filter: ['==', 'iso_3166_1_alpha_3', '']
       });
 
-      // Country click redirect
-      map.on('click', 'country-fills', (e) => {
-        const name = e.features[0].properties.name_en.toLowerCase().replace(/\s+/g, '-');
-        window.location.href = `https://mike-lee.me/countries/${name}`;
-      });
-
-      let currentHoverId = null;
-
       map.on('mousemove', 'country-fills', (e) => {
-        if (e.features.length > 0) {
-          const feature = e.features[0];
-          const iso = feature.properties.iso_3166_1_alpha_3;
-          currentHoverId = iso;
-          const isVisited = visitedCodes.includes(iso);
-
-          map.setFilter('hover-visited', isVisited ? ['==', 'iso_3166_1_alpha_3', iso] : ['==', 'iso_3166_1_alpha_3', '']);
-          map.setFilter('hover-unvisited', !isVisited ? ['==', 'iso_3166_1_alpha_3', iso] : ['==', 'iso_3166_1_alpha_3', '']);
-        }
+        const id = e.features[0].properties.iso_3166_1_alpha_3;
+        map.setFilter('country-hover', ['==', 'iso_3166_1_alpha_3', id]);
+        map.getCanvas().style.cursor = 'pointer';
       });
 
       map.on('mouseleave', 'country-fills', () => {
-        map.setFilter('hover-visited', ['==', 'iso_3166_1_alpha_3', '']);
-        map.setFilter('hover-unvisited', ['==', 'iso_3166_1_alpha_3', '']);
-        currentHoverId = null;
+        map.setFilter('country-hover', ['==', 'iso_3166_1_alpha_3', '']);
+        map.getCanvas().style.cursor = '';
       });
 
-      // Fetch visited countries
-      fetch("https://wcb-map.netlify.app/.netlify/functions/visited")
-        .then(res => res.json())
-        .then(data => {
-          visitedCodes = data.visitedCountries;
+      map.on('click', 'country-fills', (e) => {
+        const slug = e.features[0].properties.name_en.toLowerCase().replace(/\s+/g, '-');
+        window.location.href = `https://mike-lee.me/countries/${slug}`;
+      });
 
-          map.addLayer({
-            id: 'visited-countries',
-            type: 'fill',
-            source: 'countries',
-            'source-layer': 'country_boundaries',
-            filter: ['in', 'iso_3166_1_alpha_3', ...visitedCodes],
-            paint: {
-              'fill-color': '#2563EB',
-              'fill-opacity': 0.75
-            }
-          });
-        });
-
-      map.getCanvas().style.cursor = 'default';
+      document.getElementById('toggleVisited').addEventListener('click', () => {
+        showVisited = !showVisited;
+        updateLayers();
+        document.getElementById('toggleVisited').textContent = showVisited ? 'Hide Visited' : 'Show Visited';
+      });
     });
   </script>
 </body>
